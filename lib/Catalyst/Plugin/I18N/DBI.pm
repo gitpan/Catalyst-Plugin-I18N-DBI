@@ -12,7 +12,7 @@ use I18N::LangTags::Detect;
 
 use Locale::Maketext::Lexicon;
 
-use version; our $VERSION = qv("0.1.0");
+use version; our $VERSION = qv("0.2.0");
 
 =head1 NAME
 
@@ -58,11 +58,13 @@ for example:
 
     __PACKAGE__->config(
         'I18N::DBI' => {
-                         dsn       => 'dbi:Pg:dbname=postgres',
-                         user      => 'pgsql',
-                         password  => '',
-                         languages => [qw(de en)],
-                         lexicons  => [qw(*)],
+                         dsn          => 'dbi:Pg:dbname=postgres',
+                         user         => 'pgsql',
+                         password     => '',
+                         languages    => [qw(de en)],
+                         lexicons     => [qw(*)],
+                         lex_class    => 'DB::Lexicon',
+                         default_lang => 'de',
                        },
     );
 
@@ -88,16 +90,24 @@ The password for the database user.
 An array reference with language names that shall be loaded into memory.  Basically,
 this is the content of the C<lang> column.
 
+=item lex_class
+
+Defines the model for the lexicon table.
+
 =item fail_with
 
 Boolean indicating whether to use the C<fail_with> function or not.  Defaults to true.
 See L</FAQ> for details.
 
+=item default_lang
+
+Default language which is chosen when no browser accepted language is available.
+
 =back
 
-=head2 METHODS
+=head1 METHODS
 
-=head3 loc
+=head2 loc
 
 Localize text:
 
@@ -106,37 +116,68 @@ Localize text:
 =cut
 
 sub loc {
-    my ($self, $text, $args) = @_;
-
-    my @user_lang = I18N::LangTags::implicate_supers(
-                        I18N::LangTags::Detect->http_accept_langs($self->request->header('Accept-Language')));
-    my $handles = $self->config->{'I18N::DBI'}->{handles};
+    my $c    = shift;
+    my $text = shift;
+    my $args = shift;
 
     my $lang_handle;
-    foreach (@user_lang) {
+    my $handles = $c->config->{'I18N::DBI'}->{handles};
+    foreach (@{ $c->languages }) {
         if ($lang_handle = $handles->{$_}) {
             last;
         }
     }
 
     unless ($lang_handle) {
-        unless ($lang_handle = $handles->{ $self->config->{'I18N::DBI'}->{default_lang} }) {
-            $self->log->fatal(
-                    "No default language '" . $self->config->{'I18N::DBI'}->{default_lang} . "' available!");
+        unless ($lang_handle = $handles->{ $c->config->{'I18N::DBI'}->{default_lang} }) {
+            $c->log->fatal("No default language '" . $c->config->{'I18N::DBI'}->{default_lang} . "' available!");
             return $text;
         }
     }
 
+    my $value;
     if (ref $args eq 'ARRAY') {
-        return $lang_handle->maketext($text, @$args);
+        $value = $lang_handle->maketext($text, @$args);
     } else {
-        return $lang_handle->maketext($text, $args, @_);
+        $value = $lang_handle->maketext($text, $args, @_);
     }
+
+    utf8::decode($value) unless utf8::is_utf8($value);
+    return $value;
 }
 
-=head2 EXTENDED AND INTERNAL METHODS
+=head2 localize
 
-Not described here.
+Alias method to L</loc>.
+
+=cut
+
+*localize = \&loc;
+
+=head3 languages
+
+Contains languages.
+
+   $c->languages(['de_DE']);
+   print join '', @{ $c->languages };
+
+=cut
+
+sub languages {
+    my ($c, $languages) = @_;
+
+    if ($languages) {
+        $c->{languages} = $languages;
+    } else {
+        $c->{languages} ||= [I18N::LangTags::implicate_supers(I18N::LangTags::Detect->http_accept_langs($c->request->header('Accept-Language')))];
+    }
+
+    return $c->{languages};
+}
+
+=head1 EXTENDED AND INTERNAL METHODS
+
+=head2 setup
 
 =cut
 
@@ -150,9 +191,9 @@ sub setup {
 }
 
 sub _init_i18n {
-    my $self = shift;
+    my $c = shift;
 
-    my $cfg = $self->config->{'I18N::DBI'};
+    my $cfg = $c->config->{'I18N::DBI'};
     my $dbh = DBI->connect($cfg->{dsn}, $cfg->{user}, $cfg->{password}, $cfg->{attr});
 
     my $default_lex = $cfg->{lexicons}->[0];
@@ -164,47 +205,51 @@ sub _init_i18n {
         foreach my $lex (@{ $cfg->{lexicons} }) {
 
             eval <<"";
-                package ${self}::${lang};
+                package ${c}::${lang};
                 no strict;
                 use base 'Locale::Maketext';
                 # Need a dummy key to overlive the optimizer (or similar)!
                 %Lexicon = (dummy => '1');
 
             eval <<"";
-                package $self;
+                package $c;
                 use base 'Locale::Maketext';
                 Locale::Maketext::Lexicon->import(
                                        { \$lang => ['DBI' => ['lang' => \$lang, 'lex' => \$lex, dbh => \$dbh]] });
 
             if ($@) {
-                $self->log->error(qq|Couldn't initialize I18N for lexicon $lang/$lex, "$@"|);
+                $c->log->error(qq|Couldn't initialize I18N for lexicon $lang/$lex, "$@"|);
             } else {
-                $self->log->debug(qq|Lexicon $lang/$lex loaded|);
+                $c->log->debug(qq|Lexicon $lang/$lex loaded|);
             }
         }
 
-        $handles{$lang} = $self->get_handle($lang);
+        $handles{$lang} = $c->get_handle($lang);
 
         if (!defined $cfg->{fail_with} || $cfg->{fail_with}) {
             $handles{$lang}->fail_with(
                 sub {
                     my ($flh, $key, @params) = @_;
+                    my $value;
                     eval {
-                        my $res = $self->model('Lexicon')->search({ key => $key, lang => $lang, lex => $default_lex })->first;
+                        my $res = $c->model($cfg->{lex_class})->search({ key => $key, lang => $lang, lex => $default_lex })->first;
                         unless ($res) {
-                            my $rec = $self->model('Lexicon')->create(
-                                                                      {
-                                                                        lex   => $default_lex,
-                                                                        key   => $key,
-                                                                        value => '? ' . $key,
-                                                                        lang  => $lang
-                                                                      }
-                                                                     );
+                            my $rec = $c->model($cfg->{lex_class})->create(
+                                                                           {
+                                                                             lex   => $default_lex,
+                                                                             key   => $key,
+                                                                             value => '? ' . $key,
+                                                                             lang  => $lang
+                                                                           }
+                                                                          );
+                            $value = $rec->value;
+                        } else {
+                            $value = $res->value;
                         }
                     };
-                    $self->log->error("Failed within fail_with(): $@") if $@;
-    
-                    return $key;
+                    $c->log->error("Failed within fail_with(): $@") if $@;
+
+                    return $value;
                 }
             );
         }
