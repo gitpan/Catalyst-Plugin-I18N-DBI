@@ -1,6 +1,6 @@
 ---
 name: Catalyst-Plugin-I18N-DBI
-version: 0.2.0
+version: 0.2.2
 author:
   - 'Matthias Dietrich <perl@rainboxx.de>'
 abstract: DBI based I18N for Catalyst
@@ -19,7 +19,7 @@ requires:
 provides:
   Catalyst::Plugin::I18N::DBI:
     file: lib/Catalyst/Plugin/I18N/DBI.pm
-    version: 0.2.0
+    version: 0.2.2
 generated_by: Module::Build version 0.31
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html

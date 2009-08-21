@@ -1,5 +1,11 @@
 Revision history for Catalyst-Plugin-I18N-DBI
 
+0.2.2   08-22-2009/00:30pm
+        Fixed: loading of more lexicons deleted previously loaded lexicons of the same language
+
+0.2.1   05-27-2009/08:00pm
+        POD fixes
+
 0.2.0   05-27-2009/01:30pm
         Extensions and fixes to work properly.
 

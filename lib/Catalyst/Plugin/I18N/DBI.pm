@@ -12,7 +12,7 @@ use I18N::LangTags::Detect;
 
 use Locale::Maketext::Lexicon;
 
-use version; our $VERSION = qv("0.2.0");
+use version; our $VERSION = qv("0.2.2");
 
 =head1 NAME
 
@@ -154,7 +154,7 @@ Alias method to L</loc>.
 
 *localize = \&loc;
 
-=head3 languages
+=head2 languages
 
 Contains languages.
 
@@ -198,18 +198,22 @@ sub _init_i18n {
 
     my $default_lex = $cfg->{lexicons}->[0];
 
-    my %handles;
+    my (%handles, %initialized);
     foreach my $lang (@{ $cfg->{languages} }) {
         $lang =~ y/_/-/;
 
         foreach my $lex (@{ $cfg->{lexicons} }) {
 
-            eval <<"";
-                package ${c}::${lang};
-                no strict;
-                use base 'Locale::Maketext';
-                # Need a dummy key to overlive the optimizer (or similar)!
-                %Lexicon = (dummy => '1');
+            unless ($initialized{$lang}) {
+                eval <<"";
+                    package ${c}::${lang};
+                    no strict;
+                    use base 'Locale::Maketext';
+                    # Need a dummy key to overlive the optimizer (or similar)!
+                    %Lexicon = (dummy => '1');
+
+                $initialized{$lang} = 1;
+            }
 
             eval <<"";
                 package $c;
