@@ -11,9 +11,9 @@ use I18N::LangTags ();
 use I18N::LangTags::Detect;
 use Scalar::Util ();
 
-use Locale::Maketext::Lexicon;
+use Locale::Maketext::Lexicon v0.2.0;
 
-use version; our $VERSION = qv("0.2.3");
+use version; our $VERSION = qv("0.2.4");
 
 =head1 NAME
 
@@ -254,19 +254,19 @@ sub _init_i18n {
                     my ($flh, $key, @params) = @_;
                     my $value;
                     eval {
-                        my $res = $current_ctx->model($cfg->{lex_class})->search({ key => $key, lang => $lang, lex => $default_lex })->first;
+                        my $res = $current_ctx->model($cfg->{lex_class})->search({ lex_key => $key, lang => $lang, lex => $default_lex })->first;
                         unless ($res) {
                             my $rec = $current_ctx->model($cfg->{lex_class})->create(
                                                                                      {
-                                                                                       lex   => $default_lex,
-                                                                                       key   => $key,
-                                                                                       value => '? ' . $key,
-                                                                                       lang  => $lang
+                                                                                       lex       => $default_lex,
+                                                                                       lex_key   => $key,
+                                                                                       lex_value => '? ' . $key,
+                                                                                       lang      => $lang
                                                                                      }
                                                                                     );
-                            $value = $rec->value;
+                            $value = $rec->lex_value;
                         } else {
-                            $value = $res->value;
+                            $value = $res->lex_value;
                         }
                     };
                     $current_ctx->log->error("Failed within fail_with(): $@") if $@;
@@ -313,13 +313,15 @@ L<Catalyst::Plugin::I18N::DBIC>
 
 =head1 AUTHOR
 
-Matthias Dietrich, C<< <perl@rainboxx.de> >>
+Matthias Dietrich, C<< <perl@rainboxx.de> >>, http://www.rainboxx.de
 
 =head1 THANKS TO
 
 Rafael Kitover and Octavian Râşniţă for Bugfixes
 
 =head1 COPYRIGHT AND LICENSE
+
+Copyright 2008 - 2009 rainboxx Matthias Dietrich.  All Rights Reserved.
 
 This program is free software, you can redistribute it and/or modify it under
 the same terms as Perl itself.

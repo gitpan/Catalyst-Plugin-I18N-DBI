@@ -1,6 +1,9 @@
 Revision history for Catalyst-Plugin-I18N-DBI
 
-0.2.3   08-22-2009/10:18pm
+0.2.4   12-17-2009/10:30pm
+        Change: Updated C::P::I18N::DBI to support Locale::Maketext::Lexicon::DBI v0.2.0
+
+0.2.3   12-17-2009/10:18pm
         Fixed: Issues with UTF8 when using HTML::FormFu
         Fixed: Issues with Catalyst::TraitFor::Model:::DBIC::Schema::Caching (RT #52693)
 

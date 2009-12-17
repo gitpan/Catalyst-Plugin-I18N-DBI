@@ -9,7 +9,7 @@ WriteMakefile
                            'I18N::LangTags' => 0,
                            'I18N::LangTags::Detect' => 0,
                            'Locale::Maketext' => 0,
-                           'Locale::Maketext::Lexicon' => 0,
+                           'Locale::Maketext::Lexicon::DBI' => '0.2.0',
                            'NEXT' => 0,
                            'Task::Weaken' => 0,
                            'Test::More' => 0,
