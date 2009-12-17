@@ -9,10 +9,11 @@ use DBI;
 use NEXT;
 use I18N::LangTags ();
 use I18N::LangTags::Detect;
+use Scalar::Util ();
 
 use Locale::Maketext::Lexicon;
 
-use version; our $VERSION = qv("0.2.2");
+use version; our $VERSION = qv("0.2.3");
 
 =head1 NAME
 
@@ -142,7 +143,7 @@ sub loc {
         $value = $lang_handle->maketext($text, $args, @_);
     }
 
-    utf8::decode($value) unless utf8::is_utf8($value);
+    utf8::decode($value);
     return $value;
 }
 
@@ -188,6 +189,23 @@ sub setup {
     $c->log->debug("I18N Initialized");
 
     $c->NEXT::setup(@_);
+}
+
+=head2 prepare
+
+=cut
+
+my $current_ctx;
+
+sub prepare {
+    my $app = shift;
+
+    my $c = $app->NEXT::prepare(@_);
+
+    $current_ctx = $c;
+    Scalar::Util::weaken $current_ctx;
+
+    return $c;
 }
 
 sub _init_i18n {
@@ -236,22 +254,22 @@ sub _init_i18n {
                     my ($flh, $key, @params) = @_;
                     my $value;
                     eval {
-                        my $res = $c->model($cfg->{lex_class})->search({ key => $key, lang => $lang, lex => $default_lex })->first;
+                        my $res = $current_ctx->model($cfg->{lex_class})->search({ key => $key, lang => $lang, lex => $default_lex })->first;
                         unless ($res) {
-                            my $rec = $c->model($cfg->{lex_class})->create(
-                                                                           {
-                                                                             lex   => $default_lex,
-                                                                             key   => $key,
-                                                                             value => '? ' . $key,
-                                                                             lang  => $lang
-                                                                           }
-                                                                          );
+                            my $rec = $current_ctx->model($cfg->{lex_class})->create(
+                                                                                     {
+                                                                                       lex   => $default_lex,
+                                                                                       key   => $key,
+                                                                                       value => '? ' . $key,
+                                                                                       lang  => $lang
+                                                                                     }
+                                                                                    );
                             $value = $rec->value;
                         } else {
                             $value = $res->value;
                         }
                     };
-                    $c->log->error("Failed within fail_with(): $@") if $@;
+                    $current_ctx->log->error("Failed within fail_with(): $@") if $@;
 
                     return $value;
                 }
@@ -296,6 +314,10 @@ L<Catalyst::Plugin::I18N::DBIC>
 =head1 AUTHOR
 
 Matthias Dietrich, C<< <perl@rainboxx.de> >>
+
+=head1 THANKS TO
+
+Rafael Kitover and Octavian Râşniţă for Bugfixes
 
 =head1 COPYRIGHT AND LICENSE
 

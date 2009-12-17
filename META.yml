@@ -1,12 +1,12 @@
 ---
 name: Catalyst-Plugin-I18N-DBI
-version: 0.2.2
+version: v0.2.3
 author:
   - 'Matthias Dietrich <perl@rainboxx.de>'
 abstract: DBI based I18N for Catalyst
 license: perl
 resources:
-  license: ~
+  license: http://dev.perl.org/licenses/
 requires:
   DBI: 0
   I18N::LangTags: 0
@@ -14,13 +14,16 @@ requires:
   Locale::Maketext: 0
   Locale::Maketext::Lexicon: 0
   NEXT: 0
+  Task::Weaken: 0
   Test::More: 0
   version: 0
+configure_requires:
+  Module::Build: 0.35
 provides:
   Catalyst::Plugin::I18N::DBI:
     file: lib/Catalyst/Plugin/I18N/DBI.pm
-    version: 0.2.2
-generated_by: Module::Build version 0.31
+    version: v0.2.3
+generated_by: Module::Build version 0.35
 meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.2.html
-  version: 1.2
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4

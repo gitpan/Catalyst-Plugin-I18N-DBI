@@ -1,5 +1,9 @@
 Revision history for Catalyst-Plugin-I18N-DBI
 
+0.2.3   08-22-2009/10:18pm
+        Fixed: Issues with UTF8 when using HTML::FormFu
+        Fixed: Issues with Catalyst::TraitFor::Model:::DBIC::Schema::Caching (RT #52693)
+
 0.2.2   08-22-2009/00:30pm
         Fixed: loading of more lexicons deleted previously loaded lexicons of the same language
 

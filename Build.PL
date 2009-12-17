@@ -16,6 +16,7 @@ my $builder = Module::Build->new(
                   'I18N::LangTags::Detect'    => 0,
                   'Test::More'                => 0,
                   'version'                   => 0,
+                  'Task::Weaken'              => 0,
                 },
     add_to_cleanup     => ['Catalyst-Plugin-I18N-DBI-*'],
     create_makefile_pl => 'traditional',
