@@ -6,14 +6,14 @@ use warnings;
 use base qw(Locale::Maketext);
 
 use DBI;
-use NEXT;
+use Moose::Role;
 use I18N::LangTags ();
 use I18N::LangTags::Detect;
 use Scalar::Util ();
 
 use Locale::Maketext::Lexicon v0.2.0;
 
-use version; our $VERSION = qv("0.2.4");
+use version; our $VERSION = qv("0.2.5");
 
 =head1 NAME
 
@@ -182,31 +182,12 @@ sub languages {
 
 =cut
 
-sub setup {
+after 'setup_finalize' => sub {
     my $c = shift;
 
     $c->_init_i18n;
     $c->log->debug("I18N Initialized");
-
-    $c->NEXT::setup(@_);
-}
-
-=head2 prepare
-
-=cut
-
-my $current_ctx;
-
-sub prepare {
-    my $app = shift;
-
-    my $c = $app->NEXT::prepare(@_);
-
-    $current_ctx = $c;
-    Scalar::Util::weaken $current_ctx;
-
-    return $c;
-}
+};
 
 sub _init_i18n {
     my $c = shift;
@@ -254,9 +235,9 @@ sub _init_i18n {
                     my ($flh, $key, @params) = @_;
                     my $value;
                     eval {
-                        my $res = $current_ctx->model($cfg->{lex_class})->search({ lex_key => $key, lang => $lang, lex => $default_lex })->first;
+                        my $res = $c->model($cfg->{lex_class})->search({ lex_key => $key, lang => $lang, lex => $default_lex })->first;
                         unless ($res) {
-                            my $rec = $current_ctx->model($cfg->{lex_class})->create(
+                            my $rec = $c->model($cfg->{lex_class})->create(
                                                                                      {
                                                                                        lex       => $default_lex,
                                                                                        lex_key   => $key,
@@ -269,7 +250,7 @@ sub _init_i18n {
                             $value = $res->lex_value;
                         }
                     };
-                    $current_ctx->log->error("Failed within fail_with(): $@") if $@;
+                    $c->log->error("Failed within fail_with(): $@") if $@;
 
                     return $value;
                 }
